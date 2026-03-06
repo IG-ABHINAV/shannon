@@ -153,5 +153,5 @@ ENV HOME=/tmp
 ENV XDG_CACHE_HOME=/tmp/.cache
 ENV XDG_CONFIG_HOME=/tmp/.config
 
-# Set entrypoint
-ENTRYPOINT ["node", "dist/shannon.js"]
+# Default entrypoint for the worker image used by docker-compose
+ENTRYPOINT ["node", "dist/temporal/worker.js"]

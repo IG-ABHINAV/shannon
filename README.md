@@ -131,6 +131,14 @@ EOF
 ./shannon start URL=https://your-app.com REPO=your-repo
 ```
 
+On Windows PowerShell, use the native launcher instead:
+
+```powershell
+Copy-Item .env.example .env
+npm run setup
+.\shannon.ps1 start URL=http://host.docker.internal:3000 REPO=your-repo
+```
+
 Shannon will build the containers, start the workflow, and return a workflow ID. The pentest runs in the background.
 
 ### Monitoring Progress
