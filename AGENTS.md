@@ -10,15 +10,13 @@ This is an AI-powered penetration testing agent designed for defensive security 
 
 ### Prerequisites
 - **Docker** - Container runtime
-- **Anthropic API key** - Set in `.env` file
+- **Codex CLI login** - Run `codex login` on the host machine
 
 ### Running the Penetration Testing Agent (Docker + Temporal)
 ```bash
 # Configure credentials
 cp .env.example .env
-# Edit .env:
-#   ANTHROPIC_API_KEY=your-key
-#   CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000  # Prevents token limits during long reports
+codex login
 
 # Start a pentest workflow
 ./shannon start URL=<url> REPO=<name>
@@ -50,7 +48,6 @@ CONFIG=<file>          YAML configuration file for authentication and testing pa
 OUTPUT=<path>          Custom output directory for session folder (default: ./audit-logs/)
 PIPELINE_TESTING=true  Use minimal prompts and fast retry intervals (10s instead of 5min)
 REBUILD=true           Force Docker rebuild with --no-cache (use when code changes aren't picked up)
-ROUTER=true            Route requests through Codex-router for multi-model support
 ```
 
 ### Generate TOTP for Authentication
@@ -131,12 +128,12 @@ The `prompts/` directory contains specialized prompt templates for each testing 
 - `exploit-*.txt` - Exploitation attempt prompts
 - `report-executive.txt` - Executive report generation prompts
 
-### Codex Agent SDK Integration
-The agent uses the `@anthropic-ai/Codex-agent-sdk` with maximum autonomy configuration:
-- `maxTurns: 10_000` - Allows extensive autonomous analysis
-- `permissionMode: 'bypassPermissions'` - Full system access for thorough testing
+### Codex CLI Integration
+The agent executes Codex CLI directly with a Shannon-managed runtime:
+- Default model `gpt-5.4` unless overridden via `SHANNON_CODEX_MODEL`
+- `codex exec` runs against the target repository with a trusted-project config
 - Playwright MCP integration for web browser automation
-- Working directory set to target local repository
+- Shannon helper MCP server for `save_deliverable` and `generate_totp`
 - Configuration context injection for authenticated testing
 
 ### Authentication & Login Resources
@@ -188,7 +185,7 @@ The agent implements a crash-safe audit system with the following features:
 
 ### Learning from Reference Implementations
 
-A working POC exists at `/Users/arjunmalleswaran/Code/shannon-pocs` that demonstrates the ideal Temporal + Codex Agent SDK integration. When implementing Temporal features, agents can ask questions in the chat, and the user will relay them to another Codex session working in that POC directory.
+A working POC exists at `/Users/arjunmalleswaran/Code/shannon-pocs` that demonstrates the ideal Temporal + Codex CLI integration. When implementing Temporal features, agents can ask questions in the chat, and the user will relay them to another Codex session working in that POC directory.
 
 **How to use this approach:**
 1. When stuck or unsure about Temporal patterns, write a specific question in the chat
@@ -200,10 +197,10 @@ A working POC exists at `/Users/arjunmalleswaran/Code/shannon-pocs` that demonst
 - "How does the POC structure its workflow to handle parallel activities?"
 - "Show me how heartbeats are implemented in the POC's activities"
 - "What retry configuration does the POC use for long-running agent activities?"
-- "How does the POC integrate Codex Agent SDK calls within Temporal activities?"
+- "How does the POC integrate Codex CLI calls within Temporal activities?"
 
 **Reference implementation:**
-- **Temporal + Codex Agent SDK**: `/Users/arjunmalleswaran/Code/shannon-pocs` - working implementation demonstrating workflows, activities, worker setup, and SDK integration
+- **Temporal + Codex CLI**: `/Users/arjunmalleswaran/Code/shannon-pocs` - working implementation demonstrating workflows, activities, worker setup, and agent execution integration
 
 ### Adding a New Agent
 1. Define the agent in `src/session-manager.ts` (add to `AGENT_QUEUE` and appropriate parallel group)
@@ -219,7 +216,7 @@ A working POC exists at `/Users/arjunmalleswaran/Code/shannon-pocs` that demonst
 ### Key Design Patterns
 - **Configuration-Driven Architecture**: YAML configs with JSON Schema validation
 - **Modular Error Handling**: Categorized error types with retry logic
-- **SDK-First Approach**: Heavy reliance on Codex Agent SDK for autonomous AI operations
+- **CLI-First Approach**: Heavy reliance on Codex CLI for autonomous AI operations
 - **Progressive Analysis**: Each phase builds on previous phase results
 
 ### Error Handling Strategy
@@ -254,7 +251,7 @@ The tool should only be used on systems you own or have explicit permission to t
 
 **Core Logic:**
 - `src/session-manager.ts` - Agent definitions, execution order, parallel groups
-- `src/ai/Codex-executor.ts` - Codex Agent SDK integration
+- `src/ai/codex-executor.ts` - Codex CLI integration
 - `src/config-parser.ts` - YAML config parsing with JSON Schema validation
 - `src/audit/` - Crash-safe logging and metrics system
 
@@ -268,34 +265,14 @@ The tool should only be used on systems you own or have explicit permission to t
 **Output:**
 - `audit-logs/{hostname}_{sessionId}/` - Session metrics, agent logs, deliverables
 
-### Router Mode (Multi-Model Support)
+### Model Selection
 
-Shannon supports routing Codex Agent SDK requests through alternative LLM providers via [Codex-router](https://github.com/musistudio/Codex-router).
+Shannon uses the locally authenticated Codex CLI session by default. Override the default model in `.env` if needed:
 
-**Enable router mode:**
 ```bash
-./shannon start URL=<url> REPO=<name> ROUTER=true
+SHANNON_CODEX_MODEL=gpt-5.4
+SHANNON_CODEX_REASONING_EFFORT=high
 ```
-
-**Supported Providers:**
-
-| Provider | Models | Use Case |
-|----------|--------|----------|
-| OpenAI | `gpt-5.2`, `gpt-5-mini` | Good tool use, balanced cost/performance |
-| OpenRouter | `google/gemini-3-flash-preview` | Access to Gemini 3 models via single API |
-
-**Configuration (in .env):**
-```bash
-# OpenAI
-OPENAI_API_KEY=sk-your-key
-ROUTER_DEFAULT=openai,gpt-5.2
-
-# OpenRouter
-OPENROUTER_API_KEY=sk-or-your-key
-ROUTER_DEFAULT=openrouter,google/gemini-3-flash-preview
-```
-
-**Note:** Shannon is optimized for Anthropic's Codex models. Alternative providers are useful for cost savings during development but may produce varying results.
 
 ## Troubleshooting
 

@@ -5,14 +5,12 @@
 // as published by the Free Software Foundation.
 
 /**
- * generate_totp MCP Tool
+ * generate_totp tool handler.
  *
  * Generates 6-digit TOTP codes for authentication.
- * Replaces tools/generate-totp-standalone.mjs bash script.
  * Based on RFC 6238 (TOTP) and RFC 4226 (HOTP).
  */
 
-import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { createHmac } from 'crypto';
 import { z } from 'zod';
 import { createToolResult, type ToolResult, type GenerateTotpResponse } from '../types/tool-responses.js';
@@ -117,12 +115,3 @@ export async function generateTotp(args: GenerateTotpInput): Promise<ToolResult>
   }
 }
 
-/**
- * Tool definition for MCP server - created using SDK's tool() function
- */
-export const generateTotpTool = tool(
-  'generate_totp',
-  'Generates 6-digit TOTP code for authentication. Secret must be base32-encoded.',
-  GenerateTotpInputSchema.shape,
-  generateTotp
-);

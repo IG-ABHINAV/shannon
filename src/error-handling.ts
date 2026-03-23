@@ -148,12 +148,14 @@ const RETRYABLE_PATTERNS = [
   'internal server error',
   'service unavailable',
   'bad gateway',
-  // Claude API errors
+  // Agent runtime / API errors
   'mcp server',
   'model unavailable',
   'service temporarily unavailable',
   'api error',
   'terminated',
+  'usage limit',
+  'upgrade to plus',
   // Max turns
   'max turns',
   'maximum turns',
@@ -209,7 +211,7 @@ export function classifyErrorForTemporal(error: unknown): TemporalErrorClassific
   const message = (error instanceof Error ? error.message : String(error)).toLowerCase();
 
   // === BILLING ERRORS (Retryable with long backoff) ===
-  // Anthropic returns billing as 400 invalid_request_error
+  // Billing and quota failures may surface as request errors from the model runtime.
   // Human can add credits OR wait for spending cap to reset (5-30 min backoff)
   if (
     message.includes('billing_error') ||
@@ -221,8 +223,10 @@ export function classifyErrorForTemporal(error: unknown): TemporalErrorClassific
     message.includes('usage limit reached') ||
     message.includes('quota exceeded') ||
     message.includes('daily rate limit') ||
+    message.includes('usage limit') ||
+    message.includes('upgrade to plus') ||
     message.includes('limit will reset') ||
-    // Claude Code spending cap patterns (returns short message instead of error)
+    // Codex CLI account limit patterns may surface as short messages instead of structured errors.
     message.includes('spending cap') ||
     message.includes('spending limit') ||
     message.includes('cap reached') ||

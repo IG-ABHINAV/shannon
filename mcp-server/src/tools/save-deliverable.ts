@@ -5,16 +5,11 @@
 // as published by the Free Software Foundation.
 
 /**
- * save_deliverable MCP Tool
+ * save_deliverable tool handler.
  *
  * Saves deliverable files with automatic validation.
- * Replaces tools/save_deliverable.js bash script.
- *
- * Uses factory pattern to capture targetDir in closure, avoiding race conditions
- * when multiple workflows run in parallel.
  */
 
-import { tool } from '@anthropic-ai/claude-agent-sdk';
 import { z } from 'zod';
 import { DeliverableType, DELIVERABLE_FILENAMES, isQueueType } from '../types/deliverables.js';
 import { createToolResult, type ToolResult, type SaveDeliverableResponse } from '../types/tool-responses.js';
@@ -91,11 +86,4 @@ function createSaveDeliverableHandler(targetDir: string) {
  * Each MCP server instance should call this with its own targetDir to ensure
  * deliverables are saved to the correct workflow's directory.
  */
-export function createSaveDeliverableTool(targetDir: string) {
-  return tool(
-    'save_deliverable',
-    'Saves deliverable files with automatic validation. Queue files must have {"vulnerabilities": [...]} structure.',
-    SaveDeliverableInputSchema.shape,
-    createSaveDeliverableHandler(targetDir)
-  );
-}
+export { createSaveDeliverableHandler };

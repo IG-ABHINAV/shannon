@@ -12,7 +12,7 @@
 
 Shannon’s job is simple: break your web app before anyone else does. <br />
 The Red Team to your vibe-coding Blue team. <br />
-Every Claude (coder) deserves their Shannon.
+Every coder deserves their Shannon.
 
 ---
 
@@ -29,7 +29,7 @@ Shannon's goal is to break your web app before someone else does. It autonomousl
 
 **What Problem Does Shannon Solve?**
 
-Thanks to tools like Claude Code and Cursor, your team ships code non-stop. But your penetration test? That happens once a year. This creates a *massive* security gap. For the other 364 days, you could be unknowingly shipping vulnerabilities to production.
+Thanks to tools like Codex and Cursor, your team ships code non-stop. But your penetration test? That happens once a year. This creates a *massive* security gap. For the other 364 days, you could be unknowingly shipping vulnerabilities to production.
 
 Shannon closes this gap by acting as your on-demand whitebox pentester. It doesn't just find potential issues. It executes real exploits, providing concrete proof of vulnerabilities. This lets you ship with confidence, knowing every build can be secured.
 
@@ -86,7 +86,6 @@ Shannon is available in two editions:
   - [Stopping Shannon](#stopping-shannon)
   - [Usage Examples](#usage-examples)
   - [Configuration (Optional)](#configuration-optional)
-  - [[EXPERIMENTAL - UNSUPPORTED] Router Mode (Alternative Providers)](#experimental---unsupported-router-mode-alternative-providers)
   - [Output and Results](#output-and-results)
 - [Sample Reports](#-sample-reports)
 - [Architecture](#️-architecture)
@@ -103,10 +102,7 @@ Shannon is available in two editions:
 ### Prerequisites
 
 - **Docker** - Container runtime ([Install Docker](https://docs.docker.com/get-docker/))
-- **AI Provider Credentials** (choose one):
-  - **Anthropic API key** (recommended) - Get from [Anthropic Console](https://console.anthropic.com)
-  - **Claude Code OAuth token**
-  - **[EXPERIMENTAL - UNSUPPORTED] Alternative providers via Router Mode** - OpenAI or Google Gemini via OpenRouter (see [Router Mode](#experimental---unsupported-router-mode-alternative-providers))
+- **Codex CLI login** - Run `codex login` on the host machine before starting Shannon
 
 ### Quick Start
 
@@ -115,19 +111,13 @@ Shannon is available in two editions:
 git clone https://github.com/KeygraphHQ/shannon.git
 cd shannon
 
-# 2. Configure credentials (choose one method)
+# 2. Authenticate Codex CLI on the host
+codex login
 
-# Option A: Export environment variables
-export ANTHROPIC_API_KEY="your-api-key"              # or CLAUDE_CODE_OAUTH_TOKEN
-export CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000           # recommended
+# 3. Optional: create a .env override file
+cp .env.example .env
 
-# Option B: Create a .env file
-cat > .env << 'EOF'
-ANTHROPIC_API_KEY=your-api-key
-CLAUDE_CODE_MAX_OUTPUT_TOKENS=64000
-EOF
-
-# 3. Run a pentest
+# 4. Run a pentest
 ./shannon start URL=https://your-app.com REPO=your-repo
 ```
 
@@ -136,6 +126,7 @@ On Windows PowerShell, use the native launcher instead:
 ```powershell
 Copy-Item .env.example .env
 npm run setup
+codex login
 .\shannon.ps1 start URL=http://host.docker.internal:3000 REPO=your-repo
 ```
 
@@ -267,42 +258,14 @@ rules:
 
 If your application uses two-factor authentication, simply add the TOTP secret to your config file. The AI will automatically generate the required codes during testing.
 
-### [EXPERIMENTAL - UNSUPPORTED] Router Mode (Alternative Providers)
+### Model Selection
 
-Shannon can experimentally route requests through alternative AI providers using claude-code-router. This mode is not officially supported and is intended primarily for:
-
-* **Model experimentation** — try Shannon with GPT-5.2 or Gemini 3–family models
-
-#### Quick Setup
-
-1. Add your provider API key to `.env`:
+Shannon uses your local Codex CLI session by default. To change the model or reasoning effort, set overrides in `.env`:
 
 ```bash
-# Choose one provider:
-OPENAI_API_KEY=sk-...
-# OR
-OPENROUTER_API_KEY=sk-or-...
-
-# Set default model:
-ROUTER_DEFAULT=openai,gpt-5.2  # provider,model format
+SHANNON_CODEX_MODEL=gpt-5.4
+SHANNON_CODEX_REASONING_EFFORT=high
 ```
-
-2. Run with `ROUTER=true`:
-
-```bash
-./shannon start URL=https://example.com REPO=repo-name ROUTER=true
-```
-
-#### Experimental Models
-
-| Provider | Models |
-|----------|--------|
-| OpenAI | gpt-5.2, gpt-5-mini |
-| OpenRouter | google/gemini-3-flash-preview |
-
-#### Disclaimer
-
-This feature is experimental and unsupported. Output quality depends heavily on the model. Shannon is built on top of the Anthropic Agent SDK and is optimized and primarily tested with Anthropic Claude models. Alternative providers may produce inconsistent results (including failing early phases like Recon) depending on the model and routing setup.
 
 ### Output and Results
 
@@ -415,7 +378,7 @@ Shannon emulates a human penetration tester's methodology using a sophisticated 
 
 ### Architectural Overview
 
-Shannon is engineered to emulate the methodology of a human penetration tester. It leverages Anthropic's Claude Agent SDK as its core reasoning engine, but its true strength lies in the sophisticated multi-agent architecture built around it. This architecture combines the deep context of **white-box source code analysis** with the real-world validation of **black-box dynamic exploitation**, managed by an orchestrator through four distinct phases to ensure a focus on minimal false positives and intelligent context management.
+Shannon is engineered to emulate the methodology of a human penetration tester. It uses Codex CLI as its core reasoning engine, but its true strength lies in the sophisticated multi-agent architecture built around it. This architecture combines the deep context of **white-box source code analysis** with the real-world validation of **black-box dynamic exploitation**, managed by an orchestrator through four distinct phases to ensure a focus on minimal false positives and intelligent context management.
 
 ---
 
@@ -482,7 +445,7 @@ Shannon is designed for legitimate security auditing purposes only.
 #### **5. Cost & Performance**
 
 - **Time**: As of the current version, a full test run typically takes **1 to 1.5 hours** to complete.
-- **Cost**: Running the full test using Anthropic's Claude 4.5 Sonnet model may incur costs of approximately **$50 USD**. Costs vary based on model pricing and application complexity.
+- **Cost**: Running the full test incurs model usage costs through your Codex account. Total cost varies with model selection, prompt volume, and application complexity.
 
 #### **6. Windows Antivirus False Positives**
 

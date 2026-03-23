@@ -7,40 +7,62 @@
 /**
  * Shannon Helper MCP Server
  *
- * In-process MCP server providing save_deliverable and generate_totp tools
+ * Stdio MCP server providing save_deliverable and generate_totp tools
  * for Shannon penetration testing agents.
- *
- * Replaces bash script invocations with native tool access.
- *
- * Uses factory pattern to create tools with targetDir captured in closure,
- * ensuring thread-safety when multiple workflows run in parallel.
  */
 
-import { createSdkMcpServer } from '@anthropic-ai/claude-agent-sdk';
-import { createSaveDeliverableTool } from './tools/save-deliverable.js';
-import { generateTotpTool } from './tools/generate-totp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { fileURLToPath } from 'node:url';
+import { createSaveDeliverableHandler, SaveDeliverableInputSchema } from './tools/save-deliverable.js';
+import { generateTotp, GenerateTotpInputSchema } from './tools/generate-totp.js';
 
-/**
- * Create Shannon Helper MCP Server with target directory context
- *
- * Each workflow should create its own MCP server instance with its targetDir.
- * The save_deliverable tool captures targetDir in a closure, preventing race
- * conditions when multiple workflows run in parallel.
- */
-export function createShannonHelperServer(targetDir: string): ReturnType<typeof createSdkMcpServer> {
-  // Create save_deliverable tool with targetDir in closure (no global variable)
-  const saveDeliverableTool = createSaveDeliverableTool(targetDir);
-
-  return createSdkMcpServer({
+export function createShannonHelperServer(targetDir: string): McpServer {
+  const server = new McpServer({
     name: 'shannon-helper',
     version: '1.0.0',
-    tools: [saveDeliverableTool, generateTotpTool],
+  });
+
+  server.registerTool(
+    'save_deliverable',
+    {
+      description:
+        'Saves deliverable files with automatic validation. Queue files must have {"vulnerabilities": [...]} structure.',
+      inputSchema: SaveDeliverableInputSchema.shape,
+    },
+    createSaveDeliverableHandler(targetDir)
+  );
+
+  server.registerTool(
+    'generate_totp',
+    {
+      description: 'Generates 6-digit TOTP code for authentication. Secret must be base32-encoded.',
+      inputSchema: GenerateTotpInputSchema.shape,
+    },
+    generateTotp
+  );
+
+  return server;
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const targetDirIndex = args.indexOf('--target-dir');
+  const targetDir =
+    targetDirIndex >= 0 && args[targetDirIndex + 1]
+      ? args[targetDirIndex + 1]
+      : process.cwd();
+
+  const server = createShannonHelperServer(targetDir ?? process.cwd());
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+}
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
+  main().catch((error) => {
+    console.error('Shannon helper MCP server failed:', error);
+    process.exit(1);
   });
 }
 
-// Export factory for direct usage if needed
-export { createSaveDeliverableTool } from './tools/save-deliverable.js';
-export { generateTotpTool } from './tools/generate-totp.js';
-
-// Export types for external use
 export * from './types/index.js';

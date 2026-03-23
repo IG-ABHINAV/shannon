@@ -47,11 +47,12 @@ export type ToolResponse =
   | GenerateTotpResponse;
 
 export interface ToolResultContent {
-  type: string;
+  type: 'text';
   text: string;
 }
 
 export interface ToolResult {
+  [key: string]: unknown;
   content: ToolResultContent[];
   isError: boolean;
 }

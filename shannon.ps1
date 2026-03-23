@@ -47,7 +47,6 @@ Options for start:
   OUTPUT=<path>         Output directory for reports
   PIPELINE_TESTING=true Use minimal prompts for fast testing
   REBUILD=true          Rebuild the worker image with --no-cache
-  ROUTER=true           Route requests through claude-code-router
 '@ | Write-Host
 }
 
@@ -125,7 +124,6 @@ function Start-Shannon {
 
   $url = if ($ArgsMap.ContainsKey('URL')) { $ArgsMap['URL'] } else { $null }
   $repo = if ($ArgsMap.ContainsKey('REPO')) { $ArgsMap['REPO'] } else { $null }
-  $routerFlag = if ($ArgsMap.ContainsKey('ROUTER')) { $ArgsMap['ROUTER'] } else { $null }
   $rebuildFlag = if ($ArgsMap.ContainsKey('REBUILD')) { $ArgsMap['REBUILD'] } else { $null }
   $configPath = if ($ArgsMap.ContainsKey('CONFIG')) { $ArgsMap['CONFIG'] } else { $null }
   $outputPath = if ($ArgsMap.ContainsKey('OUTPUT')) { $ArgsMap['OUTPUT'] } else { $null }
@@ -135,17 +133,20 @@ function Start-Shannon {
     throw 'URL and REPO are required. Example: .\shannon.ps1 start URL=https://example.com REPO=my-repo'
   }
 
-  $hasAnthropic = -not [string]::IsNullOrWhiteSpace($env:ANTHROPIC_API_KEY)
-  $hasOauth = -not [string]::IsNullOrWhiteSpace($env:CLAUDE_CODE_OAUTH_TOKEN)
-  $routerEnabled = $routerFlag -eq 'true'
-  $hasRouterProvider = -not [string]::IsNullOrWhiteSpace($env:OPENAI_API_KEY) -or -not [string]::IsNullOrWhiteSpace($env:OPENROUTER_API_KEY)
+  $codexHome = if (-not [string]::IsNullOrWhiteSpace($env:CODEX_HOME_HOST)) {
+    $env:CODEX_HOME_HOST
+  } else {
+    Join-Path $HOME '.codex'
+  }
 
-  if (-not $hasAnthropic -and -not $hasOauth) {
-    if ($routerEnabled -and $hasRouterProvider) {
-      $env:ANTHROPIC_API_KEY = 'router-mode'
-    } else {
-      throw 'Set ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN in .env before starting Shannon.'
-    }
+  $codexAuthFile = Join-Path $codexHome 'auth.json'
+  if (-not (Test-Path $codexAuthFile)) {
+    throw "Codex authentication not found at $codexAuthFile. Run 'codex login' before starting Shannon."
+  }
+  $env:CODEX_HOME_HOST = $codexHome
+
+  if ([string]::IsNullOrWhiteSpace($env:SHANNON_CODEX_MODEL)) {
+    $env:SHANNON_CODEX_MODEL = 'gpt-5.4'
   }
 
   $containerRepo = Resolve-RepoPath -Repo $repo
@@ -166,16 +167,6 @@ function Start-Shannon {
     }
     $env:OUTPUT_DIR = $resolvedOutput.Path
     $ensureOptions['OUTPUT_DIR'] = $resolvedOutput.Path
-  }
-
-  if ($routerEnabled) {
-    if (-not $hasRouterProvider) {
-      Write-Warning 'Router mode enabled, but OPENAI_API_KEY or OPENROUTER_API_KEY is not set.'
-    }
-
-    docker compose -f $ComposeFile --profile router up -d router
-    $env:ANTHROPIC_BASE_URL = 'http://router:3456'
-    $env:ANTHROPIC_AUTH_TOKEN = 'shannon-router-key'
   }
 
   Ensure-Containers -Options $ensureOptions
@@ -234,9 +225,9 @@ function Stop-Shannon {
   $clean = if ($ArgsMap.ContainsKey('CLEAN')) { $ArgsMap['CLEAN'] } else { $null }
 
   if ($clean -eq 'true') {
-    docker compose -f $ComposeFile --profile router down -v
+    docker compose -f $ComposeFile down -v
   } else {
-    docker compose -f $ComposeFile --profile router down
+    docker compose -f $ComposeFile down
   }
 }
 

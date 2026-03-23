@@ -102,7 +102,7 @@ export function formatErrorOutput(
   } else if (context.useCleanOutput) {
     lines.push(chalk.red(`${context.agentType} failed (${formatDuration(duration)})`));
   } else {
-    lines.push(chalk.red(`  Claude Code failed: ${description} (${formatDuration(duration)})`));
+    lines.push(chalk.red(`  Codex CLI failed: ${description} (${formatDuration(duration)})`));
   }
 
   lines.push(chalk.red(`    Error Type: ${error.constructor.name}`));
@@ -139,7 +139,7 @@ export function formatCompletionMessage(
   }
 
   return chalk.green(
-    `  Claude Code completed: ${description} (${turnCount} turns) in ${formatDuration(duration)}`
+    `  Codex CLI completed: ${description} (${turnCount} turns) in ${formatDuration(duration)}`
   );
 }
 
